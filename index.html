@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Bla</title>
+    <script type="text/javascript" src="js/jquery.js"></script>
+    <script type="text/javascript" src="js/circles.js"></script>
+  </head>
+  <body>
+    Min Radius: <input type="number" id="minRadius" value="15"/></br>
+    Max Radius: <input type="number" id="maxRadius" value="30"/></br>
+    Max Sep Distance: <input type="number" id="maxSepDistance" value="0"/></br>
+    Contour Circle Radius: <input type="number" id="contourRadius" value="210"/></br></br>
+
+    Circles Color: <input type="text" id="circlesColor" value="#00ff00"/></br>
+    Contour Color: <input type="text" id="contourColor" value="#ff0000"/></br>
+    <button onclick="kernel.render();">Render</button>
+    </br></br></br>
+    <canvas id="render" height="500" width="500" style="position:absolute;right:0px;top:0px;"></canvas>
+    <canvas id="debug" height="500" width="500" style="position:absolute;right:0px;top:0px;z-index:1000;display:none;"></canvas>
+  </body>
+</html>
