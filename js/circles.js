@@ -7,8 +7,8 @@ kernel = {
     this.dctx = this.debugCanvas[0].getContext("2d");
   },
 
-  getParams: function(){
-    var out = {
+  reset: function(){
+    this.params  = {
       minRadius: parseInt($("#minRadius").val(), 10),
       maxRadius: parseInt($("#maxRadius").val(),10),
       maxSepDistance: parseInt($("#maxSepDistance").val(), 10),
@@ -17,72 +17,122 @@ kernel = {
       contourColor: $("#contourColor").val(),
       circlesColor: $("#circlesColor").val()
     };
+    
+    this.circles = {};
+    
+    this.circlesOffset = {x: this.params.contourRadius, y: this.params.contourRadius };
 
-
-    this.circlesOffset = {x: out.contourRadius, y: out.contourRadius };
-
-    out._maxDistance = out.contourRadius - out.maxSepDistance - out.minRadius;
-
-    return out;
+    this.params.angleStep = this.toFixedDeg(Math.acos((2*Math.pow(this.params.contourRadius,2)-Math.pow(2*this.params.minRadius+this.params.maxSepDistance,2))/(2*Math.pow(this.params.contourRadius,2))));
+    this.params._maxDistance = this.params.contourRadius - this.params.maxSepDistance - this.params.minRadius;
   },
 
-  debugCompare: function(faCircle, circle, params){
-    this.ctx.clearRect(0,0,params.contourRadius*2,params.contourRadius*2);
+  debugCompare: function(faCircle, circle){
+    return;
     this.ctx.strokeStyle = "black";
     this.drawCircle(faCircle,this.circlesOffset);              
     this.ctx.strokeStyle = "blue";
     this.drawCircle(circle,this.circlesOffset);              
   },
 
-  generateCircleCloud: function(params){
-    var circles = [];
+  addCircle: function(angle,circle){
+    angle = this.toFixedDeg(angle); 
+    this.circles[angle] = this.circles[angle] || [];
+    this.circles[angle].push(circle);
+  },
+
+  toFixedDeg: function(angle){
+    return Math.round(angle*180/Math.PI);
+  },
+
+  toRad: function(angle){
+    return angle*Math.PI/180;
+  },
+
+  getCone: function(angle,radius,offset){
+    var radiusRange = radius + this.params.maxRadius;
+    var deltaAngle = Math.atan(radiusRange/(offset+radius+this.params.maxSepDistance));
+    var out = [];
+    
+    var startAngle = angle - deltaAngle;
+    if(startAngle < 0){
+      startAngle += 2*Math.PI;
+    }
+    var angleStep = this.toRad(this.params.angleStep);
+    startAngle = Math.floor(startAngle/angleStep)*angleStep;
+
+    var endAngle = Math.ceil((angle+deltaAngle)%(2*Math.PI)/angleStep)*angleStep;
+
+    this.drawCone(startAngle,endAngle);
+
+    startAngle = this.toFixedDeg(startAngle);
+    endAngle = this.toFixedDeg(endAngle);
+
+    for(var a = startAngle; a !== endAngle; a += this.params.angleStep){
+      if(a >= 360){ 
+        a = 0;
+      }
+      if(this.circles[a] && this.circles[a].length > 0){
+        out = out.concat(this.circles[a]);
+      }
+    }
+    return out;
+  },
+
+  drawCone: function(startAngle,endAngle){
+    return;
+    this.ctx.clearRect(0,0,this.params.contourRadius*2,this.params.contourRadius*2);
+    this.ctx.beginPath();
+    this.ctx.moveTo(this.params.contourRadius,this.params.contourRadius);
+    this.ctx.lineTo(Math.cos(startAngle)*this.params.contourRadius, Math.sin(startAngle)*this.params.contourRadius);
+    this.ctx.closePath();
+    this.ctx.beginPath();
+    this.ctx.moveTo(this.params.contourRadius,this.params.contourRadius);
+    this.ctx.lineTo(Math.cos(endAngle)*this.params.contourRadius, Math.sin(endAngle)*this.params.contourRadius);
+    this.ctx.closePath();
+  },
+
+  generateCircleCloud: function(){
     var offset = 0;
-    var angleStep = Math.acos((2*Math.pow(params.contourRadius,2)-Math.pow(2*params.minRadius+params.maxSepDistance,2))/(2*Math.pow(params.contourRadius,2)));
-    var firstArm = [];
-    var lastArm = [];
-    for(var a = 0 ; a <= Math.PI*2; a+= angleStep){
+    for(var a = 0 ; a <= Math.PI*2; a+= this.toRad(this.params.angleStep)){
       offset = 0;
-      var currentArm = [];
-      var searchList = lastArm.concat(firstArm);
-
-      //      console.log("NEW ARM =======================================>");
-
       createCircle:
-        while(offset < params._maxDistance){
+        while(offset < this.params._maxDistance){
           //  console.log("NEW OFFSET ==+==");
           var circle = {};
 
-          var maxRadius = this.getRandom(params.minRadius, params.maxRadius);
+          var maxRadius = this.getRandom(this.params.minRadius, this.params.maxRadius);
           circle.x = (offset+maxRadius)*Math.cos(a); 
           circle.y = (offset+maxRadius)*Math.sin(a);
           circle.radius = maxRadius;
 
           searchList:
-            var searchList = circles.concat(currentArm);
+            
+            var searchList = this.getCone(a, circle.radius, offset);
+
             for(var c = 0; c < searchList.length; c++){
               var faCircle = searchList[c];
-              var distance = Math.sqrt(Math.pow(Math.abs(faCircle.x-circle.x),2)+Math.pow(Math.abs(faCircle.y-circle.y),2)) - faCircle.radius - params.maxSepDistance;
+              var distance = Math.sqrt(Math.pow(Math.abs(faCircle.x-circle.x),2)+Math.pow(Math.abs(faCircle.y-circle.y),2)) - faCircle.radius - this.params.maxSepDistance;
               
-              this.debugCompare(faCircle, circle, params); 
-              if(distance < params.minRadius){
+              this.debugCompare(faCircle, circle, this.params); 
+              if(distance < this.params.minRadius){
                 offset = Math.sqrt(Math.pow(faCircle.x,2) + Math.pow(faCircle.y,2))+faCircle.radius;
                 //console.log("NO HOPE", faCircle,circle);
                 continue createCircle;
-              } else if( distance > params.minRadius && distance < maxRadius){
+              } else if( distance > this.params.minRadius && distance < maxRadius){
                 maxRadius = distance;
                 circle.radius = maxRadius;
-                this.debugCompare(faCircle, circle,params); 
-                // console.log("Reducing Max RD", maxRadius,circle);
+                this.debugCompare(faCircle, circle,this.params); 
+                //console.log("Reducing Max RD", maxRadius,circle);
               } else {
-                this.debugCompare(faCircle, circle,params); 
+                this.debugCompare(faCircle, circle,this.params); 
                 //console.log("OK", distance);
               }
             }
 
 
-            if(offset+circle.radius*2 > params._maxDistance && offset+params.minRadius*2 < params._maxDistance){
-              circle.radius = (params._maxDistance - offset) / 2
-            } else if( offset+params.minRadius*2 > params._maxDistance){
+            if(offset+circle.radius*2 > this.params._maxDistance && offset+this.params.minRadius*2 < this.params._maxDistance){
+              circle.radius = (this.params._maxDistance - offset) / 2
+            } else if( offset+this.params.minRadius*2 > this.params._maxDistance){
               break;
             }
 
@@ -90,18 +140,10 @@ kernel = {
             //circle.y = offset*Math.sin(a);
             this.ctx.strokeStyle = "green";
             this.drawCircle(circle,this.circlesOffset,true);
-            var len = currentArm.push(circle);
-            offset += circle.radius*2 + params.maxSepDistance;
+            this.addCircle(a, circle);
+            offset += circle.radius*2 + this.params.maxSepDistance;
         }
-        if(a === 0){
-          firstArm = currentArm;
-        } else {
-          lastArm = currentArm;
-        }
-        circles = circles.concat(currentArm);
     }
-
-    return circles;
   },
 
   drawCircle: function(circle,offset,debugctx){
@@ -114,24 +156,28 @@ kernel = {
   },
 
   render: function(){
-    var params = this.getParams();
-    var circleCloud = this.generateCircleCloud(params);
+    this.reset();
+    console.time("Generating Circles");
+    this.generateCircleCloud();
+    console.timeEnd("Generating Circles");
     this.canvas.attr({
-      height: params.contourRadius*2,
-      width: params.contourRadius*2
+      height: this.params.contourRadius*2,
+      width: this.params.contourRadius*2
     });
 
-    this.ctx.clearRect(0,0,params.contourRadius*2,params.contourRadius*2);
-    this.ctx.strokeStyle = params.circlesColor;
+    this.ctx.clearRect(0,0,this.params.contourRadius*2,this.params.contourRadius*2);
+    this.ctx.strokeStyle = this.params.circlesColor;
 
-    for(var c in circleCloud){
-      circle = circleCloud[c];
-      this.drawCircle(circle,this.circlesOffset);
+    for(var a in this.circles){
+      for(var c in this.circles[a]){ 
+        circle = this.circles[a][c];
+        this.drawCircle(circle,this.circlesOffset);
+      }
     }
 
-    this.ctx.strokeStyle = params.contourColor;
+    this.ctx.strokeStyle = this.params.contourColor;
     this.ctx.beginPath(); 
-    this.ctx.arc(params.contourRadius,params.contourRadius,params.contourRadius,0, 2*Math.PI, false);
+    this.ctx.arc(this.params.contourRadius,this.params.contourRadius,this.params.contourRadius,0, 2*Math.PI, false);
     this.ctx.stroke();
 
   },
