@@ -49,7 +49,7 @@ kernel = {
   },
 
   getCone: function(angle,radius,offset){
-    var radiusRange = radius + this.params.maxRadius;
+    var radiusRange = radius + this.params.maxRadius + 2 * this.params.maxSepDistance;
     var deltaAngle = Math.atan(radiusRange/(offset+radius+this.params.maxSepDistance));
     var out = [];
     
@@ -92,9 +92,13 @@ kernel = {
   },
 
   generateCircleCloud: function(){
-    var offset = 0;
+    this.circles[361] = [{
+        x: 0,
+        y: 0,
+        radius: this.params.maxRadius
+    }];
     for(var a = 0 ; a <= Math.PI*2; a+= this.toRad(this.params.angleStep)){
-      offset = 0;
+      var offset = this.params.maxRadius + this.params.maxSepDistance;
       createCircle:
         while(offset < this.params._maxDistance){
           //  console.log("NEW OFFSET ==+==");
@@ -115,7 +119,7 @@ kernel = {
               
               this.debugCompare(faCircle, circle, this.params); 
               if(distance < this.params.minRadius){
-                offset = Math.sqrt(Math.pow(faCircle.x,2) + Math.pow(faCircle.y,2))+faCircle.radius;
+                offset = Math.sqrt(Math.pow(faCircle.x,2) + Math.pow(faCircle.y,2)) + faCircle.radius + 2*this.params.maxSepDistance;
                 //console.log("NO HOPE", faCircle,circle);
                 continue createCircle;
               } else if( distance > this.params.minRadius && distance < maxRadius){
