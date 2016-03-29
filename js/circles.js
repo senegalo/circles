@@ -23,7 +23,7 @@ kernel = {
     this.circlesOffset = {x: this.params.contourRadius, y: this.params.contourRadius };
 
     this.params.angleStep = this.toFixedDeg(Math.acos((2*Math.pow(this.params.contourRadius,2)-Math.pow(2*this.params.minRadius+this.params.maxSepDistance,2))/(2*Math.pow(this.params.contourRadius,2))));
-    this.params._maxDistance = this.params.contourRadius - this.params.maxSepDistance - this.params.minRadius;
+    this.params._maxDistance = this.params.contourRadius - this.params.maxSepDistance - 2 * this.params.minRadius;
   },
 
   debugCompare: function(faCircle, circle){
